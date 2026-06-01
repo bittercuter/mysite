@@ -7,8 +7,8 @@
 - Vite + React + TypeScript
 - Tailwind CSS v4
 - Biome (Lint / Format)
-- ホスティング: Cloudflare Pages
-- CI/CD: GitHub Actions
+- ホスティング: Cloudflare Pages (Git 連携)
+- CI: GitHub Actions
 
 ## 開発
 
@@ -21,64 +21,57 @@ npm run lint     # Biome lint
 npm run check    # Biome lint + format 自動修正
 ```
 
-## デプロイ (GitHub Actions → Cloudflare Pages)
+## デプロイ (Cloudflare Pages の Git 連携)
 
-`main` への push で本番、PR で Preview デプロイが自動実行されます。
-ワークフロー: [.github/workflows/deploy.yml](.github/workflows/deploy.yml)
+API トークンを発行せず、Cloudflare が GitHub の push を検知して自分でビルド・デプロイします。
+
+```
+git push origin main → Cloudflare が webhook 受信 → ビルド → 本番反映
+PR を作成            → Preview デプロイ + PR にコメントで URL 通知
+```
 
 ### 初回セットアップ
 
-#### 1. Cloudflare 側
+1. [Cloudflare ダッシュボード](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
+2. GitHub アカウントを連携し、`bittercuter/mysite` を選択
+3. Build 設定:
 
-1. Cloudflare ダッシュボード → **Workers & Pages** → **Create** → **Pages** → **Direct Upload**
-2. Project name に `bittercute` を入力して作成（中身は空でOK、Actions が後で push する）
-3. 作成後 **Custom domains** で `bittercute.dev` を追加
+   | 項目 | 値 |
+   |---|---|
+   | **Project name** | `bittercute` |
+   | **Production branch** | `main` |
+   | **Framework preset** | `Vite` |
+   | **Build command** | `npm run build` |
+   | **Build output directory** | `dist` |
+   | **Environment variables** | `NODE_VERSION=22` |
 
-#### 2. API トークン作成
+4. **Save and Deploy**
+5. デプロイ完了後 **Custom domains** で `bittercute.dev` を追加
 
-1. Cloudflare ダッシュボード右上のアイコン → **My Profile** → **API Tokens** → **Create Token**
-2. テンプレート **"Edit Cloudflare Workers"** を選択（または Custom で `Account > Cloudflare Pages > Edit` 権限を付与）
-3. 生成されたトークンをコピー
-4. **Account ID** は Workers & Pages のサイドバーから取得
+### なぜ Git 連携か
 
-#### 3. GitHub Secrets を登録
+- **API Token を発行しない**(漏洩のリスクを根絶)
+- GitHub ↔ Cloudflare の OAuth で認証され、長期トークンを自分で管理する必要がない
+- GitHub Actions の CI(`Build & Verify` / `CodeQL`)を **Branch Protection の必須チェック**にすれば、CI 通過済みコードしか main に入らない → Cloudflare はその main をビルドするので、結果として CI ゲートが効く
 
-リポジトリの **Settings → Secrets and variables → Actions → New repository secret** で以下を追加:
-
-| Name | Value |
-|---|---|
-| `CLOUDFLARE_API_TOKEN` | 上で作成した API トークン |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare アカウント ID |
-
-以上で `git push origin main` するたびに本番デプロイされます。
-
-### ワークフローの動作
-
-| トリガー | 動作 |
-|---|---|
-| `push` to `main` | 本番デプロイ (`bittercute.dev`) |
-| `pull_request` | Preview デプロイ + PR にコメントで URL 通知 |
-| 手動 (`workflow_dispatch`) | 任意のブランチで実行可 |
-
-各ジョブで `npm ci` → `npm run lint` → `npm run build` → `wrangler pages deploy` を実行します。
-
-### ローカルから直接デプロイ (緊急時用)
+### ローカルから手動デプロイ (緊急時用)
 
 ```bash
 npx wrangler pages deploy dist --project-name=bittercute
 ```
 
+このときだけ一時的に API Token を発行 → 使用後すぐ revoke すれば長期保持しなくて済みます。
+
 ## セキュリティ
 
 | 仕組み | 内容 |
 |---|---|
+| **API Token を持たない** | Cloudflare の Git 連携で OAuth 認証、long-lived secret なし |
 | **CodeQL** | `.github/workflows/codeql.yml` — JS/TS と Actions の脆弱性を週次スキャン |
 | **Dependabot** | `.github/dependabot.yml` — npm / Actions の更新 PR を毎週月曜に自動生成 |
-| **harden-runner** | Actions ランナーの egress を監査 (audit モード) |
-| **最小権限** | workflow 全体は `contents: read`、deploy ジョブのみ追加権限 |
-| **fork PR ガード** | fork からの PR では deploy をスキップして Secrets を保護 |
+| **harden-runner** | Actions ランナーの egress を監査 |
+| **最小権限** | workflow は `contents: read` のみ |
 | **persist-credentials: false** | checkout 後のトークン残留を防止 |
-| **アーティファクト分離** | build と deploy を別ジョブに分け、ビルド成果物のみ受け渡し |
 
 ### ブランチ保護の設定
 
@@ -97,6 +90,11 @@ bash scripts/setup-branch-protection.sh
 - force push / ブランチ削除 禁止
 - Dependabot のセキュリティ自動修正を有効化
 
+### GitHub 側で 1 回だけ手動 ON にしておくと安全
+
+- **Settings → Code security**: `Secret scanning` / `Push protection` / `Code scanning` をすべて有効化
+- **Settings → Actions → General → Workflow permissions**: `Read repository contents and packages permissions` をデフォルトに
+
 ### 脆弱性報告
 
 [SECURITY.md](./SECURITY.md) を参照してください。
@@ -106,15 +104,15 @@ bash scripts/setup-branch-protection.sh
 ```
 .github/
   workflows/
-    deploy.yml    # CI/CD (Cloudflare Pages)
-    codeql.yml    # CodeQL セキュリティスキャン
-  dependabot.yml  # 依存関係の自動更新
+    ci.yml          # Lint + 型チェック + ビルド検証
+    codeql.yml      # CodeQL セキュリティスキャン
+  dependabot.yml    # 依存関係の自動更新
 scripts/
   setup-branch-protection.sh
 SECURITY.md
 src/
-  App.tsx         # ページ本体
-  index.css       # Tailwind v4 エントリ
+  App.tsx           # ページ本体
+  index.css         # Tailwind v4 エントリ
   main.tsx
 public/
   favicon.svg

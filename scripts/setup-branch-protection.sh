@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# master ブランチに保護ルールを適用するスクリプト
+# main ブランチに保護ルールを適用するスクリプト
 # 前提: gh CLI ログイン済み (gh auth login)
 # 実行: bash scripts/setup-branch-protection.sh
 
