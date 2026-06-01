@@ -1,0 +1,52 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+build
+
+# Cache & temp
+.cache
+.parcel-cache
+.vite
+.turbo
+.eslintcache
+*.tsbuildinfo
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Coverage / test artifacts
+coverage
+.nyc_output
+
+# Deploy / tooling
+.wrangler
+.vercel
+.netlify
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
