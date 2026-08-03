@@ -40,7 +40,7 @@ gh api -X PUT "repos/${REPO}/branches/${BRANCH}/protection" \
 JSON
 
 echo "Enabling Dependabot security updates..."
-gh api -X PUT "repos/${REPO}/automated-security-fixes" || true
 gh api -X PUT "repos/${REPO}/vulnerability-alerts" || true
+gh api -X PUT "repos/${REPO}/automated-security-fixes" || true
 
 echo "Done. Branch protection applied to ${BRANCH}."
