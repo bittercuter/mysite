@@ -20,7 +20,7 @@
     "@biomejs/biome": "2.5.12",
     "@cloudflare/vite-plugin": "^1.54.7",
     "@tailwindcss/vite": "^4.3.3",
-    "@types/node": "^25.9.2",
+    "@types/node": "^26.5.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
