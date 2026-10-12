@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
-    "@cloudflare/vite-plugin": "^1.62.4",
+    "@cloudflare/vite-plugin": "^1.63.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^25.9.2",
     "@types/react": "^19.3.0",
@@ -27,6 +27,6 @@
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
     "vite": "^8.3.4",
-    "wrangler": "^4.145.0"
+    "wrangler": "^4.149.0"
   }
 }
